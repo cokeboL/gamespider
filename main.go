@@ -11,6 +11,6 @@ func main() {
 		return
 	}
 	for i, v := range resources {
-		fmt.Printf("resources %04d: %+v", i, resources)
+		fmt.Printf("resources %04d: %+v", i, v)
 	}
 }

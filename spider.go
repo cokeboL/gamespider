@@ -6,9 +6,8 @@ import (
 	"net/http"
 )
 
-func get() []byte {
-
-	url := "http://wx.qlogo.cn/mmhead/Q3auHgzwzM4QbsClOMQYCebTC18YLSFyMygia7ysLTkOatSQGm7Cgow/132"
+func get(url string) []byte {
+	//url := "http://wx.qlogo.cn/mmhead/Q3auHgzwzM4QbsClOMQYCebTC18YLSFyMygia7ysLTkOatSQGm7Cgow/132"
 
 	req, _ := http.NewRequest("GET", url, nil)
 
@@ -22,4 +21,6 @@ func get() []byte {
 
 	fmt.Println(res)
 	fmt.Println(string(body))
+
+	return body
 }
