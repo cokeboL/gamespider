@@ -22,7 +22,7 @@ func main() {
 		// }
 		wg.Add(1)
 		getResource(&v, func(err interface{}) {
-			defer fmt.Println("getResource over callback")
+			//defer fmt.Println("getResource over callback")
 			mtx.Lock()
 			defer mtx.Unlock()
 			defer wg.Done()

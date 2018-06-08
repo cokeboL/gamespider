@@ -65,12 +65,12 @@ func checkAndSetDownLoading(url string) bool {
 func getResource(info *RequestInfo, cb func(err interface{})) {
 	if _, ok := contentTypes[info.Type]; ok && !checkAndSetDownLoading(info.Url) {
 		//url := "http://wx.qlogo.cn/mmhead/Q3auHgzwzM4QbsClOMQYCebTC18YLSFyMygia7ysLTkOatSQGm7Cgow/132"
-		fmt.Println("start getResource: ", info.Url)
+		//fmt.Println("start getResource: ", info.Url)
 		go func() {
 			defer func() {
 				err := recover()
 				cb(err)
-				fmt.Println("getResource error: ", err)
+				//fmt.Println("getResource error: ", err)
 			}()
 
 			for i := 0; i < 5; i++ {
@@ -99,7 +99,7 @@ func getResource(info *RequestInfo, cb func(err interface{})) {
 				}
 
 				info.Path = req.URL.Path
-				fmt.Println("start saveToFile:", req.URL.Path)
+				//fmt.Println("start saveToFile:", req.URL.Path)
 				saveToFile(info, body)
 				break
 			}
