@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -22,6 +23,9 @@ var (
 		"image/jpeg":               ".jpeg",
 		// "application/x-font-woff":  ".fnt",
 	}
+
+	delay      = time.Second / 100
+	totalDelay = time.Duration(0)
 )
 
 type Req struct {
@@ -30,6 +34,7 @@ type Req struct {
 	Ip             string                 `json:"ip"`
 	RawHeaderNames map[string]string      `json:"rawHeaderNames"`
 	Headers        map[string]interface{} `json:"headers"`
+	RawHeaders     map[string]interface{} `json:"rawHeaders"`
 }
 
 type Res struct {
@@ -38,6 +43,7 @@ type Res struct {
 	StatusMessage  string                 `json:"statusMessage"`
 	RawHeaderNames map[string]string      `json:"rawHeaderNames"`
 	Headers        map[string]interface{} `json:"headers"`
+	RawHeaders     map[string]interface{} `json:"rawHeaders"`
 }
 
 type RequestInfo struct {
@@ -62,49 +68,97 @@ func checkAndSetDownLoading(url string) bool {
 	return ok
 }
 
-func getResource(info *RequestInfo, cb func(err interface{})) {
-	if _, ok := contentTypes[info.Type]; ok && !checkAndSetDownLoading(info.Url) {
-		//url := "http://wx.qlogo.cn/mmhead/Q3auHgzwzM4QbsClOMQYCebTC18YLSFyMygia7ysLTkOatSQGm7Cgow/132"
-		//fmt.Println("start getResource: ", info.Url)
-		go func() {
-			defer func() {
-				err := recover()
-				cb(err)
-				//fmt.Println("getResource error: ", err)
-			}()
-
-			for i := 0; i < 5; i++ {
-				req, err := http.NewRequest("GET", info.Url, nil)
-				if err != nil {
-					fmt.Println("start getResource error 111: ", err)
-					continue
-				}
-				req.Header.Add("Cache-Control", "no-cache")
-				req.Header.Add("Postman-Token", "761ed2da-f8fc-41f5-ad3c-786ac35d0370")
-
-				client := http.Client{
-					Timeout: 10 * time.Second,
-				}
-				res, err := client.Do(req)
-				if err != nil {
-					fmt.Println("start getResource error 222: ", err)
-					continue
-				}
-
-				defer res.Body.Close()
-				body, err := ioutil.ReadAll(res.Body)
-				if err != nil {
-					fmt.Println("start getResource error 333: ", err)
-					continue
-				}
-
-				info.Path = req.URL.Path
-				//fmt.Println("start saveToFile:", req.URL.Path)
-				saveToFile(info, body)
-				break
-			}
-		}()
-	} else {
-		defer cb("duplication")
+func needDownLoad(info *RequestInfo) bool {
+	if _, ok := contentTypes[info.Type]; ok && !checkAndSetDownLoading(info.Url) && !strings.Contains(info.Url, "?") {
+		return true
 	}
+	return false
+}
+func getResource(info *RequestInfo, cb func(err interface{})) {
+	//url := "http://wx.qlogo.cn/mmhead/Q3auHgzwzM4QbsClOMQYCebTC18YLSFyMygia7ysLTkOatSQGm7Cgow/132"
+	// if info.Url == "http://wx.qlogo.cn/mmhead/Q3auHgzwzM4QbsClOMQYCebTC18YLSFyMygia7ysLTkOatSQGm7Cgow/132" {
+	// 	fmt.Println("------------------------------------------------------------------------------------------")
+	// 	fmt.Println("get: ", info.Url)
+	// 	fmt.Println("------------------------------------------------------------------------------------------")
+	// }
+	fmt.Println(info.Url)
+	var outerr interface{} = nil
+
+	go func(delaytime time.Duration) {
+		defer func() {
+			if err := recover(); err != nil {
+				cb(err)
+			}
+			cb(outerr)
+			//fmt.Println("getResource error: ", err)
+		}()
+
+		time.Sleep(delaytime)
+
+		for i := 0; i < 5; i++ {
+			time.Sleep(delay)
+			req, err := http.NewRequest("GET", info.Url, nil)
+			if err != nil {
+				outerr = err
+				fmt.Println("getResource error 111: ", err)
+				continue
+			}
+
+			// for key, khead := range info.Req.RawHeaderNames {
+			// 	if vhead, ok := info.Req.Headers[key]; ok {
+			// 		if strVHead, ok := vhead.(string); ok {
+			// 			req.Header.Add(khead, strVHead)
+			// 		}
+
+			// 	}
+			// }
+
+			for k, v := range info.Req.RawHeaders {
+				if str, ok := v.(string); ok {
+					req.Header.Add(k, str)
+					fmt.Println("Add Header: ", info.Url, k, v)
+				} else {
+					if arr, ok := v.([]string); ok {
+						for _, str := range arr {
+							req.Header.Add(k, str)
+							fmt.Println("Add Header: ", info.Url, k, v)
+						}
+					}
+				}
+
+			}
+
+			client := http.Client{
+				Timeout: 60 * time.Second,
+			}
+			res, err := client.Do(req)
+			if err != nil {
+				outerr = err
+				fmt.Println("getResource error 222: ", err)
+				continue
+			}
+
+			if res.StatusCode != 200 {
+				fmt.Println(res.StatusCode, res.Status)
+				outerr = res.Status
+				fmt.Println("getResource error 333: ", outerr)
+				continue
+			}
+
+			defer res.Body.Close()
+			body, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				outerr = err
+				fmt.Println("getResource error 444: ", err)
+				continue
+			}
+
+			info.Path = req.URL.Path
+			//fmt.Println("start saveToFile:", req.URL.Path)
+			saveToFile(info, body)
+			return
+		}
+		fmt.Println("getResource error 555: ", outerr)
+	}(totalDelay)
+	totalDelay += delay
 }
