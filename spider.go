@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	//"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -13,18 +13,9 @@ var (
 	downMtx     = sync.Mutex{}
 	downLoading = map[string]bool{}
 
-	contentTypes = map[string]string{
-		"text/html":                ".html",
-		"text/css":                 ".css",
-		"application/javascript":   ".js",
-		"image/png":                ".png",
-		"application/json":         ".js",
-		"application/x-javascript": ".js",
-		"image/jpeg":               ".jpeg",
-		// "application/x-font-woff":  ".fnt",
-	}
-
-	delay      = time.Second / 100
+	tryTimes   = 5
+	timeout    = time.Second * 10
+	tryDelay   = time.Duration(0)
 	totalDelay = time.Duration(0)
 )
 
@@ -74,20 +65,14 @@ func needDownLoad(info *RequestInfo) bool {
 	}
 	return false
 }
-func getResource(info *RequestInfo, cb func(err interface{})) {
-	//url := "http://wx.qlogo.cn/mmhead/Q3auHgzwzM4QbsClOMQYCebTC18YLSFyMygia7ysLTkOatSQGm7Cgow/132"
-	// if info.Url == "http://wx.qlogo.cn/mmhead/Q3auHgzwzM4QbsClOMQYCebTC18YLSFyMygia7ysLTkOatSQGm7Cgow/132" {
-	// 	fmt.Println("------------------------------------------------------------------------------------------")
-	// 	fmt.Println("get: ", info.Url)
-	// 	fmt.Println("------------------------------------------------------------------------------------------")
-	// }
-	fmt.Println(info.Url)
+func newSpider(info *RequestInfo, subdir string, cb func(err interface{})) {
 	var outerr interface{} = nil
 
 	go func(delaytime time.Duration) {
 		defer func() {
 			if err := recover(); err != nil {
 				cb(err)
+				return
 			}
 			cb(outerr)
 			//fmt.Println("getResource error: ", err)
@@ -95,33 +80,24 @@ func getResource(info *RequestInfo, cb func(err interface{})) {
 
 		time.Sleep(delaytime)
 
-		for i := 0; i < 5; i++ {
-			time.Sleep(delay)
+		for i := 0; i < 2; i++ {
+			time.Sleep(tryDelay)
 			req, err := http.NewRequest("GET", info.Url, nil)
 			if err != nil {
 				outerr = err
-				fmt.Println("getResource error 111: ", err)
+				//fmt.Println("getResource error 111: ", err)
 				continue
 			}
-
-			// for key, khead := range info.Req.RawHeaderNames {
-			// 	if vhead, ok := info.Req.Headers[key]; ok {
-			// 		if strVHead, ok := vhead.(string); ok {
-			// 			req.Header.Add(khead, strVHead)
-			// 		}
-
-			// 	}
-			// }
 
 			for k, v := range info.Req.RawHeaders {
 				if str, ok := v.(string); ok {
 					req.Header.Add(k, str)
-					fmt.Println("Add Header: ", info.Url, k, v)
+					//fmt.Println("Add Header: ", info.Url, k, v)
 				} else {
 					if arr, ok := v.([]string); ok {
 						for _, str := range arr {
 							req.Header.Add(k, str)
-							fmt.Println("Add Header: ", info.Url, k, v)
+							//fmt.Println("Add Header: ", info.Url, k, v)
 						}
 					}
 				}
@@ -129,19 +105,19 @@ func getResource(info *RequestInfo, cb func(err interface{})) {
 			}
 
 			client := http.Client{
-				Timeout: 60 * time.Second,
+				Timeout: timeout,
 			}
 			res, err := client.Do(req)
 			if err != nil {
 				outerr = err
-				fmt.Println("getResource error 222: ", err)
+				//fmt.Println("getResource error 222: ", err)
 				continue
 			}
 
 			if res.StatusCode != 200 {
-				fmt.Println(res.StatusCode, res.Status)
+				//fmt.Println(res.StatusCode, res.Status)
 				outerr = res.Status
-				fmt.Println("getResource error 333: ", outerr)
+				//fmt.Println("getResource error 333: ", outerr)
 				continue
 			}
 
@@ -149,16 +125,16 @@ func getResource(info *RequestInfo, cb func(err interface{})) {
 			body, err := ioutil.ReadAll(res.Body)
 			if err != nil {
 				outerr = err
-				fmt.Println("getResource error 444: ", err)
+				//fmt.Println("getResource error 444: ", err)
 				continue
 			}
 
 			info.Path = req.URL.Path
 			//fmt.Println("start saveToFile:", req.URL.Path)
-			saveToFile(info, body)
+			saveToFile(info, subdir, body)
 			return
 		}
-		fmt.Println("getResource error 555: ", outerr)
+		//fmt.Println("getResource error 555: ", outerr)
 	}(totalDelay)
-	totalDelay += delay
+	totalDelay += tryDelay
 }
