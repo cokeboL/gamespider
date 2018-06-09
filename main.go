@@ -21,30 +21,32 @@ func main() {
 	fmt.Println("--------------------------------------------------------------------------------------------------")
 	fmt.Println("start get")
 	fmt.Println("--------------------------------------------------------------------------------------------------")
+
+	downLoadInfos := []*RequestInfo{}
 	for _, info := range resources {
-		// if info.Type != "" {
-		// 	types[info.Type] = true
-		// }
-		tmp := info
-		if needDownLoad(&tmp) {
-			totalNum++
-			wg.Add(1)
-			getResource(&tmp, func(err interface{}) {
-				//defer fmt.Println("getResource over callback")
-				mtx.Lock()
-				defer mtx.Unlock()
-				defer wg.Done()
-				if err == nil {
-					successNum++
-				}
-			})
+		if !needDownLoad(&info) {
+
+		} else {
+			downLoadInfos = append(downLoadInfos, &info)
 		}
+	}
+	fmt.Println("--------------------------------------------------------------------------------------------------")
+	for _, info := range downLoadInfos {
+		wg.Add(1)
+		getResource(info, func(err interface{}) {
+			mtx.Lock()
+			defer mtx.Unlock()
+			defer wg.Done()
+			if err == nil {
+				successNum++
+			}
+		})
 	}
 	fmt.Println("--------------------------------------------------------------------------------------------------")
 
 	wg.Wait()
 
-	fmt.Printf("%d / %d / %d success\n", successNum, totalNum, len(resources))
+	fmt.Printf("%d / %d / %d success\n", successNum, len(downLoadInfos), len(resources))
 	// fmt.Println("------------------------")
 	// for t, _ := range types {
 	// 	fmt.Println(t)
