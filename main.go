@@ -5,10 +5,16 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 func main() {
 	wg := &sync.WaitGroup{}
+
+	tryTimes = 3
+	timeout = time.Second * 10
+	tryDelay = time.Duration(time.Second / 10)
+	totalDelay = time.Duration(time.Second / 10)
 
 	err := filepath.Walk("./res/src", func(path string, f os.FileInfo, err error) error {
 		fmt.Println("path:", path)
