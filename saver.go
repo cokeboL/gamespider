@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -12,19 +12,19 @@ var (
 	rootDir, _ = os.Getwd()
 )
 
-func saveToFile(info *RequestInfo, subdir string, data []byte) {
+func saveToFile(info *RequestInfo, subdir string, data []byte) error {
 	savePath := path.Join(rootDir, "res/dst/", subdir, info.Path)
-	fmt.Println("savePath: ", savePath)
+	//fmt.Println("savePath: ", savePath)
 	if pos := strings.LastIndex(savePath, "/"); pos >= 0 {
-		fmt.Println("MkdirAll: ", savePath[:pos])
 		os.MkdirAll(savePath[:pos], 0644)
+		// err := os.MkdirAll(savePath[:pos], 0644)
+		// fmt.Println("MkdirAll: ", savePath[:pos], err)
 	}
 
 	// suffix := contentTypes[info.Type]
 	// if !strings.HasSuffix(savePath, suffix) {
 	// 	savePath += suffix
 	// }
-	if err := ioutil.WriteFile(savePath, data, 0644); err != nil {
-		fmt.Printf("savePath %s error: %v", savePath, err)
-	}
+	err := ioutil.WriteFile(savePath, data, 0644)
+	return err
 }

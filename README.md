@@ -1,10 +1,16 @@
-这里有个文件
-把他的 资源url 提取出来  download
-然后 按路径 创建相应的文件夹 保存
- 类似这样
-只提取url的，比如 "url": http://static.yunaq.com/static/js/stat/picture1_stat.js ?
-对  js  html png mp3  txt json  这些
-凡是 cdn 可以静态缓存的  都提取
-大灰灰狼_  21:38:59
-存储的路径就是这些资源的相对路径吧？
-是的
+编译：
+	gamespider放到GOPATH/src下
+	go build -o gamespider.bin gamespider
+	./gamespider.bin
+
+配置：
+	需要爬取的配置文件放到 res/src 目录下，会遍历该目录下的文件进行解析爬取，只遍历一层
+
+结果：
+	爬取结果存放在 res/dst 目录中
+
+参数：
+	每个 url 最多尝试次数：3
+	每个 url 爬取超市时间：time.Second * 10
+	每个 url 每次爬取延时：time.Second / 10
+	所有 url 爬取起始延时：time.Second / 10，每增加一个 url，此值会加上每次爬取的延时控制爬取速度

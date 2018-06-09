@@ -20,12 +20,12 @@ func parseJsonFile(filename string) ([]RequestInfo, error) {
 }
 
 func newTask(src string, wg *sync.WaitGroup) {
-	wg.Add(1)
+	fmt.Println("newTask: ", src)
 	defer wg.Done()
 
 	resources, err := parseJsonFile(src)
 	if err != nil {
-		fmt.Println("parseJsonFile error:", err.Error())
+		fmt.Println("parseJsonFile %s error: %v", src, err)
 		return
 	}
 
@@ -38,7 +38,7 @@ func newTask(src string, wg *sync.WaitGroup) {
 	ignoreInfos := []*RequestInfo{}
 	for _, info := range resources {
 		tmp := info
-		if needDownLoad(&tmp) {
+		if needDownLoad(src, &tmp) {
 			downLoadInfos = append(downLoadInfos, &tmp)
 			taskWg.Add(1)
 		} else {
@@ -46,29 +46,44 @@ func newTask(src string, wg *sync.WaitGroup) {
 		}
 	}
 
+	success := []*RequestInfo{}
+	failed := []*RequestInfo{}
 	go func() {
 		subdir := src
-		if pos := strings.LastIndex(src, "."); pos >= 0 {
-			subdir = src[:pos]
-		}
-		if pos := strings.LastIndex(src, "/"); pos >= 0 {
+		// if pos := strings.LastIndex(subdir, "."); pos >= 0 {
+		// 	subdir = src[:pos]
+		// }
+		if pos := strings.LastIndex(subdir, "/"); pos >= 0 {
 			subdir = src[pos:]
-		} else if pos := strings.LastIndex(src, "\\"); pos >= 0 {
+		} else if pos := strings.LastIndex(subdir, "\\"); pos >= 0 {
 			subdir = src[pos:]
 		}
 		for _, info := range downLoadInfos {
-			newSpider(info, subdir, func(err interface{}) {
+			tmp := info
+			newSpider(tmp, subdir, func(err interface{}) {
 				mtx.Lock()
 				defer mtx.Unlock()
 				defer taskWg.Done()
 				if err == nil {
+					success = append(success, tmp)
 					successNum++
+				} else {
+					failed = append(failed, tmp)
 				}
 			})
 		}
-
 	}()
 	taskWg.Wait()
 
-	fmt.Printf("%s finish, success: %d, need download: %d, total: %d success\n", src, successNum, len(downLoadInfos), len(resources))
+	sep := "-------------------------------------------------------------------------------------------\n"
+	str := "\n" + sep + fmt.Sprintf("task \"%s\" finish, success: %d, need download: %d, total: %d \n\nsuccess: %d\n", src, successNum, len(downLoadInfos), len(resources), successNum)
+	for _, info := range success {
+		str += ("  " + info.Url + "\n")
+	}
+	str += fmt.Sprintf("\nfailed: %d\n", len(downLoadInfos)-successNum)
+	for _, info := range failed {
+		str += ("  " + info.Url + "\n")
+	}
+	str += sep
+	fmt.Println(str)
 }

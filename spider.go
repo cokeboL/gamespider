@@ -59,8 +59,9 @@ func checkAndSetDownLoading(url string) bool {
 	return ok
 }
 
-func needDownLoad(info *RequestInfo) bool {
-	if _, ok := contentTypes[info.Type]; ok && !checkAndSetDownLoading(info.Url) && !strings.Contains(info.Url, "?") {
+func needDownLoad(root string, info *RequestInfo) bool {
+	// if _, ok := contentTypes[info.Type]; ok && strings.ToUpper(info.Method) == "GET" && !checkAndSetDownLoading(info.Url) &&!strings.Contains(info.Url, "?") {
+	if _, ok := contentTypes[info.Type]; ok && strings.ToUpper(info.Method) == "GET" && !checkAndSetDownLoading(root+info.Url) {
 		return true
 	}
 	return false
@@ -131,7 +132,7 @@ func newSpider(info *RequestInfo, subdir string, cb func(err interface{})) {
 
 			info.Path = req.URL.Path
 			//fmt.Println("start saveToFile:", req.URL.Path)
-			saveToFile(info, subdir, body)
+			outerr = saveToFile(info, subdir, body)
 			return
 		}
 		//fmt.Println("getResource error 555: ", outerr)

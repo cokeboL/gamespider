@@ -17,20 +17,21 @@ func main() {
 	totalDelay = time.Duration(time.Second / 10)
 
 	err := filepath.Walk("./res/src", func(path string, f os.FileInfo, err error) error {
-		fmt.Println("path:", path)
 		if f == nil {
-			fmt.Printf("filepath.Walk() error %v\n", err)
+			fmt.Printf("walk src dir error %v\n", err)
 			return err
 		}
 		if f.IsDir() {
-			fmt.Printf("filepath.Walk() error %v\n", err)
+			//fmt.Printf("walk src dir error %v\n", err)
 			return nil
 		}
-		newTask(path, wg)
+		tmp := path
+		wg.Add(1)
+		go newTask(tmp, wg)
 		return nil
 	})
 	if err != nil {
-		fmt.Printf("filepath.Walk() error %v\n", err)
+		fmt.Printf("walk src dir error %v\n", err)
 	}
 
 	//newTask("./res/src/法老娱乐1.txt", wg)
